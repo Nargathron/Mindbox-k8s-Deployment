@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-webApp #заполняем metadata, пишем здесь название приложения
+  labels:
+    app: newWebApp #Здесь пишем название приложения для метки нашего деплоймента для дальнейшего поиска и группировки
+    tier: backend #Здесь можем описать к примеру тир нашего деплоймента (как пример разделить их по фронтенду и бэкэнду)
+spec:
+  replicas: 4 #Описание количества реплик, по ТЗ на необходимо сделать 4 пода (автоскейлингом можно управлять через примитив HorizontalPodAutoscaler пример простой команды: kubectl autoscale deployment newWebApp --cpu-percent=100 --min=2 --max=4 )
+  selector: # Описываем как наш Deployment обнаружит какими подами надо управлять
+    matchLabels:
+      app: newWebApp
+  template: #Описываем шаблон нашего пода
+    metadata:
+      labels:
+        app: newWebApp #Описываем метку наших подов
+        tier: backend
+    spec: #Описываем наш под
+      containers:
+      - name: newWebApp #Описываем имя пода
+        image: "docker.io/newWebApp" #Описываем реджестри откуда брать образ для пода, если реджестри приватный, логин паролб задаем в примитиве secret 
+        resources: #Указываем ресурсы, которые надо зарезервировать для пода
+          requests: #Минимальное количество ресурсов
+            cpu: 100m
+            memory: 128Mi
+          limits: #ограничение максимального использования ресурсов
+            cpu: 1000m
+            memory: 256Mi
+        livenessProbe: #проверка жизнеспособности пода
+          httpGet:
+            path: /healthz #делаем запрос например на такой url
+            port: 80 #по этому порту
+          failureThreshold: 3 #количество проверок
+          periodSeconds: 10 #время через какое необходимо осуществить проверку
+        ports:
+        - containerPort: 6379 #порт который используется для доступа к приложению на который необходимо будет написать еще service для доступа к приложению
